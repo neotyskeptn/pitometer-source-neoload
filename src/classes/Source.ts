@@ -16,7 +16,7 @@
 import { HttpClient, HttpHandler } from '@angular/common/http';
 import {Observable, throwError} from 'rxjs';
 
-import  { ISourceResult,ISource } from '@keptn/pitometer';
+import  { ISourceResult,ISource } from '@keptn/pitometer/dist/types';
 import {
   ApiModule,
   ResultsService,
@@ -25,7 +25,7 @@ import {
   ArrayOfElementDefinition,
   ElementDefinition,
   Point, CounterDefinition, CounterDefinitionArray, ArrayOfTestDefinition, TestDefinition
-} from 'neoload-api';
+} from '@neotys/neoload-api';
 import {Environement} from "./Environement";
 import {NeoLoadContext} from "./NeoLoadContext";
 import {INeoLoadOptions} from "./NeoLoadOptions";
@@ -83,10 +83,14 @@ export class Source implements ISource {
     var id:string ="all-requests";
 
 
-    var result:Array<ISourceResult>=this.resultAPI.getTestElementsPoints(this.neoloadContext.testid,id,query.statistics).forkjoin().map(elementpoint=>{
-        return {key:query.statistics,
-          timestamp:this.timereference + elementpoint.from,
-            value:this.getElementValue(query.statistics,elementpoint)};
+    var result:Array<ISourceResult>=new Array<ISourceResult>();
+
+        this.resultAPI.getTestElementsPoints(this.neoloadContext.testid,id,query.statistics).subscribe(elementpoint=>{
+        elementpoint.forEach(point=>{
+          result.push({key:query.statistics,
+            timestamp:this.timereference + point.from,
+            value:this.getElementValue(query.statistics,point)});
+        })
     });
 
 
@@ -123,10 +127,13 @@ export class Source implements ISource {
         return element.name==query.metricname;
       }).forEach(element=>{
 
-        this.resultAPI.getTestElementsPoints(this.neoloadContext.testid,element.id,query.statistics).forkjoin().forEach(elementpoint=>{
-          result.push( {key: element.name,
-            timestamp:this.timereference + elementpoint.from,
-            value:this.getElementValue(query.statistics,elementpoint)});
+        this.resultAPI.getTestElementsPoints(this.neoloadContext.testid,element.id,query.statistics).subscribe(elementpoint=>{
+          elementpoint.forEach(point=>{
+            result.push( {key: element.name,
+              timestamp:this.timereference + point.from,
+              value:this.getElementValue(query.statistics,point)});
+          })
+
         })});
     });
 
@@ -136,7 +143,12 @@ export class Source implements ISource {
 
 
    getTimeReference():number  {
-    return this.resultAPI.getTest(this.neoloadContext.testid).forkkoin().startDate();
+    var testtime:number;
+    this.resultAPI.getTest(this.neoloadContext.testid).subscribe(test=>{
+      testtime=test.startDate;
+    });
+
+    return testtime;
   }
 
    getElementValue(elementStatisticName: string, element: Point):number  {
@@ -180,11 +192,13 @@ export class Source implements ISource {
         return counter.name == query.metricname;
       }).forEach(counterdef => {
 
-        this.resultAPI.getTestMonitorsPoints(this.neoloadContext.testid, counterdef.id).forkjoin().forEach(elementpoint => {
-          result.push({
-            key: counterdef.name,
-            timestamp: this.timereference + elementpoint.from,
-            value: elementpoint.AVG
+        this.resultAPI.getTestMonitorsPoints(this.neoloadContext.testid, counterdef.id).subscribe(elementpoint => {
+          elementpoint.forEach(point=>{
+            result.push({
+              key: counterdef.name,
+              timestamp: this.timereference + point.from,
+              value: point.AVG
+            })
           });
         });
       });
@@ -197,11 +211,15 @@ export class Source implements ISource {
   getTestId():string
   {
       const teststatus:string="TERMINATED";
-      var arraytestdefinition:ArrayOfTestDefinition=this.resultAPI.getTests(teststatus,this.neoloadContext.projectName).forkjoin();
-      var lastest:TestDefinition=arraytestdefinition.filter(function(def){
-        return def.scenario==this.neoloadContext.scenarioName && def.startDate>=this.timeStart;
-      }).slice(-1)[0];
-      return lastest.id
+      var lastest:Array<TestDefinition>=new Array<TestDefinition>();
+      this.resultAPI.getTests(teststatus,this.neoloadContext.projectName).subscribe(testdefinition=>{
+        lastest.push(testdefinition.filter(function(def){
+          return def.scenario==this.neoloadContext.scenarioName && def.startDate>=this.timeStart;
+        }).slice(-1)[0]);
+      });
+
+
+      return lastest.slice(-1)[0].id
   }
 
   async fetch(query): Promise<ISourceResult[] | boolean>
@@ -214,7 +232,7 @@ export class Source implements ISource {
     if(!this.neoloadContext.testid )
     {
       //---get the sample id of the sample
-      this.neoloadContext.testid=this.resultAPI.getTests();
+      this.neoloadContext.testid=this.getTestId()
 
     }
     this.timereference=this.getTimeReference();
