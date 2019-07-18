@@ -213,7 +213,7 @@ export class Source implements ISource {
 
     if(!this.neoloadContext.testid )
     {
-      //---get the test id of the test
+      //---get the sample id of the sample
       this.neoloadContext.testid=this.resultAPI.getTests();
 
     }
