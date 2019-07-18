@@ -1,0 +1,35 @@
+{
+  "name": "@pitometer/source-neoload",
+  "version": "0.0.1",
+  "description": "",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/neotyskeptn/pitometer-source-neoload.git"
+  },
+  "keywords": ["LoadTest","Neoload","pitometer"],
+  "author": "Henrik Rexed",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/neotyskeptn/pitometer-source-neoload/issues"
+  },
+  "homepage": "https://github.com/neotyskeptn/pitometer-source-neoload#readme",
+  "devDependencies": {
+    "@types/node": "^11.13.2",
+    "@keptn/pitometer": "1.1.0",
+    "neoload-api": "^1.1.1",
+    "tslint": "^5.15.0",
+    "tslint-config-airbnb": "^5.11.1",
+    "typescript": "^3.4.2",
+    "@keptn/pitometer-grader-threshold": "^1.1.0"
+  },
+  "dependencies": {
+    "axios": "^0.18.0",
+    "neoload-api": "^1.1.1",
+    "rxjs": "latest"
+  }
+}

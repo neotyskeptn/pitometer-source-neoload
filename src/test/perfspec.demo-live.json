@@ -1,0 +1,61 @@
+{
+  "spec_version": "1.1",
+  "indicators": [
+    {
+      "id": "Global Hit/s",
+      "source": "NeoLoad",
+      "query": {
+        "metryType": "global",
+        "statistics": "ELEMENTS_PER_SECOND"
+      },
+      "output": "series",
+      "grading": {
+        "type": "Threshold",
+        "thresholds": {
+          "upperSevere": 10,
+          "upperWarning": 15
+        },
+        "metricScore": 20
+      }
+    },
+    {
+      "id": "global error rate",
+      "source": "NeoLoad",
+      "query": {
+        "metryType": "global",
+        "statistics": "ERROR_RATE"
+      },
+      "output": "series",
+      "grading": {
+        "type": "Threshold",
+        "thresholds": {
+          "upperSevere": 10
+        },
+        "metricScore": 20
+      }
+    },
+    {
+      "id": "average_submit_responsetime",
+      "source": "NeoLoad",
+      "query": {
+        "metryType": "element",
+        "elementType": "TRANSACTION",
+        "statistics": "AVG_DURATION",
+        "metricname":"submit"
+      },
+      "output": "series",
+      "grading": {
+        "type": "Threshold",
+        "thresholds": {
+          "upperSevere": 4,
+          "upperWarning": 3
+        },
+        "metricScore": 30
+      }
+    }
+  ],
+  "objectives": {
+    "pass": 65,
+    "warning": 55
+  }
+}
