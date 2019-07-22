@@ -1,6 +1,6 @@
 {
   "name": "@neotys/pitometer-source-neoload",
-  "version": "0.0.5",
+  "version": "0.0.19",
   "description": "",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -23,17 +23,18 @@
   },
   "homepage": "https://github.com/neotyskeptn/pitometer-source-neoload#readme",
   "devDependencies": {
-    "@types/node": "^11.13.2",
+    "@types/node": "10.0.4",
     "@keptn/pitometer": "1.1.0",
-    "@neotys/neoload-api": "^1.1.3",
     "tslint": "^5.15.0",
     "tslint-config-airbnb": "^5.11.1",
     "typescript": "^3.4.2",
-    "@keptn/pitometer-grader-threshold": "^1.1.0"
+    "@keptn/pitometer-grader-threshold": "^1.1.0",
+    "@neotys/neoload-api":"^1.1.5",
+    "swagger-client" : "^3.9.0"
   },
   "dependencies": {
-    "axios": "^0.18.0",
-    "rxjs": "latest",
-    "rxjs-compat": "^6.5.2"
+
+    "@neotys/neoload-api":"^1.1.5",
+    "swagger-client" : "^3.9.0"
   }
 }

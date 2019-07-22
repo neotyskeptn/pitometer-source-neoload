@@ -13,35 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { HttpClient, HttpHandler } from '@angular/common/http';
-import {Observable, throwError} from 'rxjs';
+
 
 import  { ISourceResult,ISource } from '@keptn/pitometer/dist/types';
-import {
-  ApiModule,
-  ResultsService,
-  ConfigurationParameters,
-  Configuration,
-  ArrayOfElementDefinition,
-  ElementDefinition,
-  Point, CounterDefinition, CounterDefinitionArray, ArrayOfTestDefinition, TestDefinition
-} from '@neotys/neoload-api';
+
 import {Environement} from "./Environement";
 import {NeoLoadContext} from "./NeoLoadContext";
 import {INeoLoadOptions} from "./NeoLoadOptions";
-
+import {Swagger} from 'swagger-client';
+import {
+  ArrayOfElementDefinition,
+  CounterDefinition,
+  ElementDefinition,
+  Point,
+  TestDefinition
+} from "@neotys/neoload-api/dist";
 
 export class Source implements ISource {
   private timeStart?: number;
   private timeEnd?: number;
   private context?: string;
-  private apimodule:ApiModule ;
-  private resultAPI: ResultsService;
+  private environment: Environement;
   private neoloadContext:NeoLoadContext;
-  private httclient:HttpClient;
-  private httpHandler: HttpHandler;
+  private swagger:Promise<any>;
   private  timereference:number;
-  private conf:Configuration
+
   private  static TRANSACTION:string="TRANSACTION";
   private static  REQUEST:string ="REQUEST";
   private static PAGE:string="PAGE";
@@ -61,15 +57,16 @@ export class Source implements ISource {
 
 
   constructor( environement:Environement ) {
-    let token : { [key: string]: string} = {};
-    token["accountToken"] = environement.apiToken;
-    this.conf = new Configuration({apiKeys:token, basePath:environement.neoloadapirul});
-    // @ts-ignore
-    this.httpHandler = new HttpHandler();
-    this.httclient =new HttpClient(this.httpHandler);
-    this.resultAPI=new ResultsService(this.httclient,this.conf.basePath,this.conf);
-  }
 
+      this.environment = environement;
+      this.swagger=Swagger({url: this.environment.neoloadapirul + "/explore/swagger.yaml"}, {
+          requestInterceptor: function (temp) {
+              this.headers = {...this.headers,accountToken: this.environment.apiToken};
+              // console.log(temp);
+          },
+      });
+
+  }
   public setOptions(options: INeoLoadOptions) {
     this.timeStart = options.timeStart;
     this.timeEnd = options.timeEnd;
@@ -83,15 +80,31 @@ export class Source implements ISource {
     var id:string ="all-requests";
 
 
-    var result:Array<ISourceResult>=new Array<ISourceResult>();
+    var result:Array<ISourceResult>;
+    Swagger({url: this.environment.neoloadapirul + "/explore/swagger.yaml"}, {
+      requestInterceptor: function (temp) {
+        this.headers = {...this.headers,accountToken: this.environment.apiToken};
+        // console.log(temp);
+      },
+    }).then(client=> {
+      client.apis.Results.GetTestElementsPoints({testId: this.neoloadContext.testid,elementId:id,statistics:query.statistics}).then(
+          response=>{
+           var arrayJson:Array<any>;
+           arrayJson=response.body;
+           arrayJson.forEach(point=>{
+             result.push({key:query.statistics,
+               timestamp:this.timereference + point.from,
+               value:this.getElementValue(query.statistics,point)});
+           });
+          }
+      );
 
-        this.resultAPI.getTestElementsPoints(this.neoloadContext.testid,id,query.statistics).subscribe(elementpoint=>{
-        elementpoint.forEach(point=>{
-          result.push({key:query.statistics,
-            timestamp:this.timereference + point.from,
-            value:this.getElementValue(query.statistics,point)});
-        })
-    });
+    }
+
+    ).catch(error=>{
+        throw  new Error(error);
+    } );
+
 
 
       return result;
@@ -119,23 +132,60 @@ export class Source implements ISource {
         throw new Error(`Unsupported element type (${query})`);
 
     }
-    var arrayOfElementDefinition:Observable<ArrayOfElementDefinition>=this.resultAPI.getTestElements(this.neoloadContext.testid,elementype);
+    var arrayofelementid:Array<string>;
+    Swagger({url: this.environment.neoloadapirul + "/explore/swagger.yaml"}, {
+      requestInterceptor: function (temp) {
+        this.headers = {...this.headers,accountToken: this.environment.apiToken};
+        // console.log(temp);
+      },
+    }).then(client=> {
+          client.apis.Results.GetTestElements({testId: this.neoloadContext.testid}).then(
+              response=>{
+                var arrayJson:Array<ElementDefinition>;
+                arrayJson=response.body;
 
-    var result:Array<ISourceResult>=new Array<ISourceResult>();
-    arrayOfElementDefinition.subscribe(arrayofelement=>{
-      arrayofelement.filter(function getid(element)  {
-        return element.name==query.metricname;
-      }).forEach(element=>{
+                arrayJson.filter(function getid(element)  {
+                    return element.name==query.metricname;
+                  }).forEach(elementdefinitino=>{
+                    arrayofelementid.push(elementdefinitino.id)
+                  });
 
-        this.resultAPI.getTestElementsPoints(this.neoloadContext.testid,element.id,query.statistics).subscribe(elementpoint=>{
-          elementpoint.forEach(point=>{
-            result.push( {key: element.name,
-              timestamp:this.timereference + point.from,
-              value:this.getElementValue(query.statistics,point)});
-          })
+              }
+          );
 
-        })});
+        }
+
+    ).catch(error=>{
+        throw  new Error(error);
+    } );;
+    var result:Array<ISourceResult>;
+    arrayofelementid.forEach(elementid=>{
+      Swagger({url: this.environment.neoloadapirul + "/explore/swagger.yaml"}, {
+        requestInterceptor: function (temp) {
+          this.headers = {...this.headers,accountToken: this.environment.apiToken};
+          // console.log(temp);
+        },
+      }).then(client=> {
+            client.apis.Results.GetTestElementsPoints({testId: this.neoloadContext.testid,elementId:elementid,statistics:query.statistics}).then(
+                response=>{
+                  var arrayJson:Array<Point>;
+                  arrayJson=response.body;
+                  arrayJson.forEach(point=>{
+                    result.push({key:query.statistics,
+                      timestamp:this.timereference + point.from,
+                      value:this.getElementValue(query.statistics,point)});
+                  });
+                }
+            );
+
+          }
+
+      ).catch(error=>{
+          throw  new Error(error);
+      } );
     });
+
+
 
    return result;
 
@@ -144,9 +194,25 @@ export class Source implements ISource {
 
    getTimeReference():number  {
     var testtime:number;
-    this.resultAPI.getTest(this.neoloadContext.testid).subscribe(test=>{
-      testtime=test.startDate;
-    });
+
+     Swagger({url: this.environment.neoloadapirul + "/explore/swagger.yaml"}, {
+       requestInterceptor: function (temp) {
+         this.headers = {...this.headers,accountToken: this.environment.apiToken};
+         // console.log(temp);
+       },
+     }).then(client=> {
+           client.apis.Results.GetTest({testId: this.neoloadContext.testid}).then(
+               response=>{
+                  testtime=response.body.startDate;
+               }
+           );
+
+         }
+
+     ).catch(error=>{
+         throw  new Error(error);
+     } );
+
 
     return testtime;
   }
@@ -183,26 +249,62 @@ export class Source implements ISource {
 
   async fechmonitoring(query):  Promise<ISourceResult[] | boolean>
   {
-    var arraycounter:Observable<CounterDefinitionArray>=this.resultAPI.getTestMonitors(this.neoloadContext.testid);
+    var monitordefinition:Array<string>;
 
+    Swagger({url: this.environment.neoloadapirul + "/explore/swagger.yaml"}, {
+      requestInterceptor: function (temp) {
+        this.headers = {...this.headers,accountToken: this.environment.apiToken};
+        // console.log(temp);
+      },
+    }).then(client=> {
+          client.apis.Results.GetTestMonitors({testId: this.neoloadContext.testid}).then(
+              response=>{
+                var arrayJson:Array<CounterDefinition>;
+                arrayJson=response.body;
 
-    var result:Array<ISourceResult>=new Array<ISourceResult>();
-    arraycounter.subscribe(arraycounter=> {
-      arraycounter.filter(function getid(counter) {
-        return counter.name == query.metricname;
-      }).forEach(counterdef => {
+                arrayJson.filter(function getid(element)  {
+                  return element.name==query.metricname;
+                }).forEach(elementdefinitino=>{
+                  monitordefinition.push(elementdefinitino.id)
+                });
 
-        this.resultAPI.getTestMonitorsPoints(this.neoloadContext.testid, counterdef.id).subscribe(elementpoint => {
-          elementpoint.forEach(point=>{
-            result.push({
-              key: counterdef.name,
-              timestamp: this.timereference + point.from,
-              value: point.AVG
-            })
-          });
-        });
-      });
+              }
+          );
+
+        }
+
+    ).catch(error=>{
+        throw  new Error(error);
+    } );
+    var result:Array<ISourceResult>;
+    monitordefinition.forEach(elementid=>{
+      Swagger({url: this.environment.neoloadapirul + "/explore/swagger.yaml"}, {
+        requestInterceptor: function (temp) {
+          this.headers = {accountToken: this.environment.apiToken};
+          // console.log(temp);
+        },
+      }).then(client=> {
+            client.apis.Results.GetTestMonitorsPoints({testId: this.neoloadContext.testid,elementId:elementid}).then(
+                response=>{
+                  var arrayJson:Array<Point>;
+                  arrayJson=response.body;
+                  arrayJson.forEach(point=>{
+                    result.push({key:query.statistics,
+                      timestamp:this.timereference + point.from,
+                      value:point.AVG});
+                  });
+                }
+            );
+
+          }
+
+      ).catch(error=>{
+          throw  new Error(error);
+      } );
     });
+
+
+
 
 
     return result;
@@ -211,15 +313,34 @@ export class Source implements ISource {
   getTestId():string
   {
       const teststatus:string="TERMINATED";
-      var lastest:Array<TestDefinition>=new Array<TestDefinition>();
-      this.resultAPI.getTests(teststatus,this.neoloadContext.projectName).subscribe(testdefinition=>{
-        lastest.push(testdefinition.filter(function(def){
-          return def.scenario==this.neoloadContext.scenarioName && def.startDate>=this.timeStart;
-        }).slice(-1)[0]);
-      });
+      var lastest:Array<string>;
+
+    Swagger({url: this.environment.neoloadapirul + "/explore/swagger.yaml"}, {
+      requestInterceptor: function (temp) {
+        this.headers = {accountToken: this.environment.apiToken};
+        // console.log(temp);
+      },
+    }).then(client=> {
+          client.apis.Results.GetTests({testId: this.neoloadContext.testid}).then(
+              response => {
+                var testDefinitions: Array<TestDefinition>;
+                testDefinitions = response.body;
+                testDefinitions.filter(function (def) {
+                  return def.scenario == this.neoloadContext.scenarioName && def.startDate >= this.timeStart;
+                }).forEach(testdefinition => {
+                  lastest.push(testdefinition.id)
+                });
+
+              }
+          );
+        }
+    ).catch(error=>{
+        throw  new Error(error);
+    } );
 
 
-      return lastest.slice(-1)[0].id
+
+      return lastest.slice(-1)[0];
   }
 
   async fetch(query): Promise<ISourceResult[] | boolean>
