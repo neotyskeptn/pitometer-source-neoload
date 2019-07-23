@@ -1,7 +1,7 @@
 {
   "name": "@neotys/pitometer-source-neoload",
-  "version": "0.0.19",
-  "description": "",
+  "version": "1.0.0",
+  "description": "pitometer data source for NeoLoad",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
