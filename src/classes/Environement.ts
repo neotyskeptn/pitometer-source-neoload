@@ -1,18 +1,18 @@
 export interface EnvironementParameters {
     neoloadapirul?:string;
-    neoloadwuploadurl?: string;
+    neoloaduploadurl?: string;
     apiToken?: string;
 }
 
 export class Environement {
     neoloadapirul?: string;
-    neoloadwuploadurl?: string;
+    neoloaduploadurl?: string;
     apiToken?: string;
 
 
     constructor(configurationParameters: EnvironementParameters = {}) {
         this.neoloadapirul = configurationParameters.neoloadapirul;
-        this.neoloadwuploadurl = configurationParameters.neoloadwuploadurl;
+        this.neoloaduploadurl = configurationParameters.neoloaduploadurl;
         this.apiToken = configurationParameters.apiToken;
     }
 
